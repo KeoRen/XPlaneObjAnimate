@@ -48,7 +48,7 @@ public slots:
    /* void Animation();*/
    /* void reset();*/
    void save();
-   void getDir();
+   void getFile();
    /* void openItem(int, int);*/
 
 };

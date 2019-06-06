@@ -9,6 +9,8 @@
 #include <QGeoCoordinate>
 #include <math.h>
 
+#define RAYON_TERRE 6371
+
 class XPlaneObj8
 {
     private:
@@ -16,7 +18,7 @@ class XPlaneObj8
 
     public:
         XPlaneObj8();
-        XPlaneObj8(QList<QGeoCoordinate> animList);
+        XPlaneObj8(QList<QGeoCoordinate> animList, float speed);
         XPlaneObj8(QList<QVector4D> animList);
         void setupData(const QStringList& lines);
         QStringList mvtList();

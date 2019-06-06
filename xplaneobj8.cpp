@@ -6,9 +6,21 @@ XPlaneObj8::XPlaneObj8()
 
 }
 
-XPlaneObj8::XPlaneObj8(QList<QGeoCoordinate> animList)
+XPlaneObj8::XPlaneObj8(QList<QGeoCoordinate> animList, float speed)
 {
+    QVector2D lastPos = QVector2D(0, 0);
+    float chrono = 0;
+    float duree = 0;
 
+    for (int i = 0 ; i < animList.size() ; ++i)
+    {
+        TranslationObj8* mvt = new TranslationObj8("none");
+        mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
+        lastPos = QVector2D(float(sin(animList[i].latitude()) * RAYON_TERRE), float(sin(animList[i].latitude()) * RAYON_TERRE));
+        duree = (sqrt(lastPos.x() * lastPos.x() + lastPos.y() * lastPos.y()) / (speed / 3.6) - chrono);
+        chrono += duree;
+        mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
+    }
 }
 
 XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
@@ -22,7 +34,7 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
 
         if (int(animList[i].x()) == 1)
         {
-            TranslationObj8* mvt = new TranslationObj8("none");
+            TranslationObj8* mvt = new TranslationObj8("LLFFS/AnimChrono");
             mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
             chrono += (animList[i].y() / animList[i].z() / float(3.6));
             lastPos = QVector2D(cos(animList[i].w()) / animList[i].y(), sin(animList[i].w()) / animList[i].y());
@@ -31,7 +43,7 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
         }
         else
         {
-            RotationObj8* mvt = new RotationObj8(QVector3D(1, 0, 0), "none");
+            RotationObj8* mvt = new RotationObj8(QVector3D(1, 0, 0), "LLFFS/AnimChrono");
             mvt->newKey(QVector4D(chrono, lastAngle, 0, 0));
             chrono += animList[i].w() / animList[i].z();
             lastAngle += animList[i].w();
@@ -73,7 +85,7 @@ QList<QVector4D> XPlaneObj8::animList()
             for (int k = 1 ; k < r->keyCount() ; ++k)
             {
                 angle = r->keyAngle(k);
-                speed = abs(angle / (r->keyValue(k) - chrono));
+                speed = abs((angle - r->keyAngle((k - 1))) / (r->keyValue(k) - chrono));
                 if (isnan(speed)) speed = 0;
                 chrono = r->keyValue(k);
                 animList << QVector4D(0, 0, speed, angle);
@@ -88,7 +100,6 @@ QList<QVector4D> XPlaneObj8::animList()
 void XPlaneObj8::setupData(const QStringList &lines)
 {
     int number = 0; //numéro de ligne
-    int level = 0;  //niveau hiérarchique
 
     qDebug() << lines.count() << "lignes reçues" ;
 
@@ -107,17 +118,7 @@ void XPlaneObj8::setupData(const QStringList &lines)
         QList<QVariant> columnData;
         for (int i = 0 ; i < parse.count() ; ++i) columnData << parse[i];
 
-        int memLevel = level;
-
-        if (parse.at(0) == "ANIM_begin")
-        {
-            ++level;
-        }
-        else if (parse.at(0) == "ANIM_end")
-        {
-            --level;
-        }
-        else if (parse.at(0) == "ANIM_rotate")
+        if (parse.at(0) == "ANIM_rotate")
         {
             QVector3D axis;
             QVector4D k1, k2;
@@ -156,7 +157,6 @@ void XPlaneObj8::setupData(const QStringList &lines)
         }
         else if (parse.at(0) == "ANIM_rotate_begin")
         {
-            ++level;
             QVector3D axis;
             QString dataref;
             if (parse.size() >= 4)
@@ -175,13 +175,8 @@ void XPlaneObj8::setupData(const QStringList &lines)
                 m_mvtList.last()->newKey(k);
             }
         }
-        else if (parse.at(0) == "ANIM_rotate_end")
-        {
-            --level;
-        }
         else if (parse.at(0) == "ANIM_trans_begin")
         {
-            ++level;
             QString dataref;
             if (parse.size() >= 2) dataref = parse.at(1);
             TranslationObj8* mvt = new TranslationObj8(dataref);
@@ -194,10 +189,6 @@ void XPlaneObj8::setupData(const QStringList &lines)
                 QVector4D k(parse[1].toFloat(), parse[2].toFloat(), parse[3].toFloat(), parse[4].toFloat());
                 m_mvtList.last()->newKey(k);
             }
-        }
-        else if (parse.at(0) == "ANIM_trans_end")
-        {
-            --level;
         }
         else
         {
@@ -256,9 +247,24 @@ QStringList XPlaneObj8::mvtList()
 
 void XPlaneObj8::writeData(const QString objPath)
 {
-    QStringList list;
+    if (objPath == "") return;
 
-    list << "ANIM_begin";
+    QFile file(objPath);
+
+    if(!file.open(QIODevice::ReadWrite)) return;
+
+    QTextStream stream(&file);
+    QStringList list;
+    QString tris;
+
+    while (!stream.atEnd())
+    {
+        QString line = stream.readLine();
+        if (!line.contains("ANIM") && !line.contains("TRIS")) list << line;
+        if (line.contains("TRIS")) tris = line;
+    }
+
+    list << "\nANIM_begin";
 
     for (int anim = 0 ; anim < m_mvtList.size() ; ++anim)
     {
@@ -302,18 +308,15 @@ void XPlaneObj8::writeData(const QString objPath)
         }
     }
 
+    list << tris;
     list << "\nANIM_end";
 
-    if (objPath == "") return;
-
-    QFile file(objPath);
-
-    if(!file.open(QIODevice::WriteOnly)) return;
-
-    QTextStream stream(&file);
+    file.resize(0);
 
     for (int i = 0 ; i < list.size() ; ++i)
     {
         stream << list[i] << endl;
     }
+
+    file.close();
 }
