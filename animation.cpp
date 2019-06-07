@@ -252,8 +252,12 @@ void animation::mouseReleaseEvent(QMouseEvent *event)
     for (int n=0;n<RectListe.length();n++) {
         if(  point.x() >=  RectListe[n].x() && point.x() <= RectListe[n].topRight().x() && point.y() >= RectListe[n].y() &&  point.y() <= RectListe[n].bottomLeft().y() )
         {
-
-            lastchoice = n + rectScroll->value();
+            if(ActionListe.length()>4) {
+                lastchoice = n + rectScroll->value();
+            }
+            else {
+                lastchoice = n;
+            }
             cout << "bloc n°" << lastchoice << " type : " << ActionListe[lastchoice].x() << endl;
             if(ActionListe[lastchoice].x() == 1.0f) translation();
             else rotation();
@@ -321,7 +325,7 @@ void animation::getFile()
         ActionListe = anim.animList();
         RectListe.clear();
         for (int i = 0; i< ActionListe.length();i++) {
-            RectListe.append(QRect(500, 100 + 100*RectListe.length(), 100,50));
+            RectListe.append(QRect(480, 100 + 100*RectListe.length(), 120,50));
         }
 
         update();

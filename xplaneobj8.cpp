@@ -36,8 +36,10 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
         {
             TranslationObj8* mvt = new TranslationObj8("LLFFS/AnimChrono");
             mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
+            mvt->newKey(QVector4D(chrono + MIN_GAP, lastPos.x(), lastPos.y(), 0));
             chrono += (animList[i].y() / animList[i].z() / float(3.6));
             lastPos = QVector2D(cos(animList[i].w()) / animList[i].y(), sin(animList[i].w()) / animList[i].y());
+            mvt->newKey(QVector4D(chrono - MIN_GAP, lastPos.x(), lastPos.y(), 0));
             mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
             m_mvtList.append(mvt);
         }
@@ -70,7 +72,7 @@ QList<QVector4D> XPlaneObj8::animList()
             for (int k = 1 ; k < t->keyCount() ; ++k)
             {
                 dist = sqrt(t->keyPoint(k).x() * t->keyPoint(k).x() + t->keyPoint(k).y() * t->keyPoint(k).y());
-                speed = dist / (t->keyValue(k) - chrono) * float(3.6);
+                speed = dist / ((t->keyValue(k) - chrono) * float(3.6));
                 if (isinf(speed)) speed = 0;
                 angle = atan(abs(t->keyPoint(k).y()) / abs(t->keyPoint(k).x()));
                 if (isnan(angle)) angle = 0;
