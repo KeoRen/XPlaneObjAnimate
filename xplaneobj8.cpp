@@ -37,18 +37,20 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
             TranslationObj8* mvt = new TranslationObj8("LLFFS/AnimChrono");
             mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
             mvt->newKey(QVector4D(chrono + MIN_GAP, lastPos.x(), lastPos.y(), 0));
-            chrono += (animList[i].y() / animList[i].z() / float(3.6));
-            lastPos = QVector2D(cos(animList[i].w()) / animList[i].y(), sin(animList[i].w()) / animList[i].y());
-            mvt->newKey(QVector4D(chrono - MIN_GAP, lastPos.x(), lastPos.y(), 0));
-            mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
+            chrono += (animList[i].y() / float(animList[i].z() / 3.6f));
+            lastPos = QVector2D(cos(animList[i].w() * M_PI / 180.0f) * animList[i].y(), sin(animList[i].w() * M_PI / 180.0f) * animList[i].y());
+            mvt->newKey(QVector4D(chrono - MIN_GAP, lastPos.x(), 0, lastPos.y()));
+            mvt->newKey(QVector4D(chrono, lastPos.x(), 0, lastPos.y()));
             m_mvtList.append(mvt);
         }
         else
         {
-            RotationObj8* mvt = new RotationObj8(QVector3D(1, 0, 0), "LLFFS/AnimChrono");
+            RotationObj8* mvt = new RotationObj8(QVector3D(0, 1, 0), "LLFFS/AnimChrono");
             mvt->newKey(QVector4D(chrono, lastAngle, 0, 0));
+            mvt->newKey(QVector4D(chrono + MIN_GAP, lastAngle, 0, 0));
             chrono += animList[i].w() / animList[i].z();
             lastAngle += animList[i].w();
+            mvt->newKey(QVector4D(chrono - MIN_GAP, lastAngle, 0, 0));
             mvt->newKey(QVector4D(chrono, lastAngle, 0, 0));
             m_mvtList.append(mvt);
         }
@@ -69,30 +71,30 @@ QList<QVector4D> XPlaneObj8::animList()
         if (m_mvtList.at(i)->isTranslation())
         {
             TranslationObj8* t = static_cast<TranslationObj8*>(m_mvtList.at(i));
-            for (int k = 1 ; k < t->keyCount() ; ++k)
+            for (int k = 3 ; k < 4 /* t->keyCount() */ ; ++k)
             {
                 dist = sqrt(t->keyPoint(k).x() * t->keyPoint(k).x() + t->keyPoint(k).y() * t->keyPoint(k).y());
-                speed = dist / ((t->keyValue(k) - chrono) * float(3.6));
-                if (isinf(speed)) speed = 0;
+                if (isnan(dist) || isinf(dist)) dist = 0;
+                speed = dist / (t->keyValue(k) - chrono) * 3.6f;
+                if (isnan(speed) || isinf(speed)) speed = 0;
                 angle = atan(abs(t->keyPoint(k).y()) / abs(t->keyPoint(k).x()));
-                if (isnan(angle)) angle = 0;
+                if (isnan(angle) || isinf(angle)) angle = 0;
                 chrono = t->keyValue(k);
-                animList << QVector4D(1, dist, speed, angle);
+                animList << QVector4D(1, dist, speed, angle); //Type, distance, vitesse, angle
             }
-            chrono = 0;
         }
         else if (m_mvtList.at(i)->isRotation())
         {
             RotationObj8* r = static_cast<RotationObj8*>(m_mvtList.at(i));
-            for (int k = 1 ; k < r->keyCount() ; ++k)
+            for (int k = 3 ; k < 4 /* r->keyCount() */ ; ++k)
             {
                 angle = r->keyAngle(k);
-                speed = abs((angle - r->keyAngle((k - 1))) / (r->keyValue(k) - chrono));
+                qDebug() << chrono;
+                speed = abs((angle - r->keyAngle(k - 1)) / (r->keyValue(k) - chrono));
                 if (isnan(speed)) speed = 0;
                 chrono = r->keyValue(k);
-                animList << QVector4D(0, 0, speed, angle);
+                animList << QVector4D(0, 0, speed, angle); //Type, distance, vitesse, angle
             }
-            chrono = 0;
         }
     }
 
@@ -152,10 +154,13 @@ void XPlaneObj8::setupData(const QStringList &lines)
             }
             if (parse.size() >= 10) dataref = parse.at(9);
 
-            TranslationObj8* mvt = new TranslationObj8(dataref);
-            mvt->newKey(k1);
-            mvt->newKey(k2);
-            m_mvtList.append(mvt);
+            if (k1.y() != 0 && k1.z() != 0 && k1.w() != 0 && k2.y() != 0 && k2.z() != 0 && k2.w() != 0)
+            {
+                TranslationObj8* mvt = new TranslationObj8(dataref);
+                mvt->newKey(k1);
+                mvt->newKey(k2);
+                m_mvtList.append(mvt);
+            }
         }
         else if (parse.at(0) == "ANIM_rotate_begin")
         {
@@ -258,6 +263,8 @@ void XPlaneObj8::writeData(const QString objPath)
     QTextStream stream(&file);
     QStringList list;
     QString tris;
+    bool inch(false);
+    QVector3D lastResort(0, 0, 0);
 
     while (!stream.atEnd())
     {
@@ -283,8 +290,13 @@ void XPlaneObj8::writeData(const QString objPath)
             {
                 mvt = "\t\tANIM_trans_key";
                 QVector3D p = t->keyPoint(i);
-                mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(p.x()).arg(p.y()).arg(p.z());
+                if (p.x() < 0.001) p.setX(0);
+                if (p.y() < 0.001) p.setY(0);
+                if (p.z() < 0.001) p.setZ(0);
+                if (i > 2 && inch) mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(-p.x()).arg(p.y()).arg(-p.z());
+                else mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(p.x()).arg(p.y()).arg(p.z());
                 list << mvt;
+                lastResort = t->keyPoint(i);
             }
             mvt = "\tANIM_trans_end";
             list << mvt;
@@ -292,7 +304,8 @@ void XPlaneObj8::writeData(const QString objPath)
 
         if (m_mvtList.at(anim)->isRotation())
         {
-            mvt = "\n\tANIM_rotate_begin";
+            mvt = QString("\n\tANIM_trans %1 %2 %3 %1 %2 %3 no_ref").arg(lastResort.x()).arg(lastResort.y()).arg(lastResort.z());
+            mvt += "\n\tANIM_rotate_begin";
             RotationObj8* r = static_cast<RotationObj8*>(m_mvtList.at(anim));
             QVector3D axis = r->axis();
             mvt += QString(" %1 %2 %3").arg(axis.x()).arg(axis.y()).arg(axis.z());
@@ -306,7 +319,9 @@ void XPlaneObj8::writeData(const QString objPath)
                 list << mvt;
             }
             mvt = "\tANIM_rotate_end";
+            mvt += QString("\n\tANIM_trans %1 %2 %3 %1 %2 %3 no_ref").arg(-lastResort.x()).arg(-lastResort.y()).arg(-lastResort.z());
             list << mvt;
+            inch = !inch;
         }
     }
 

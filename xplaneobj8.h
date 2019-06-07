@@ -10,7 +10,7 @@
 #include <math.h>
 
 #define RAYON_TERRE 6371
-#define MIN_GAP 0.000001
+#define MIN_GAP 0.001
 
 class XPlaneObj8
 {

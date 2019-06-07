@@ -112,6 +112,7 @@ void animation::translation()
 
     cout << "vit : " << ActionListe[lastchoice].z() << endl;
     label_2->show();
+
     vit->setValue( double (ActionListe[lastchoice].z()));
     vit->show();
     vit->blockSignals(false);
