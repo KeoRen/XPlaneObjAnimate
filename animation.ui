@@ -458,7 +458,11 @@
   <widget class="QWidget" name="centralWidget">
    <layout class="QGridLayout" name="gridLayout">
     <item row="0" column="1" colspan="3">
-     <widget class="QLineEdit" name="edtFile"/>
+     <widget class="QLineEdit" name="edtFile">
+      <property name="cursorMoveStyle">
+       <enum>Qt::VisualMoveStyle</enum>
+      </property>
+     </widget>
     </item>
     <item row="5" column="1">
      <widget class="QLabel" name="label_2">
@@ -546,10 +550,13 @@ rot:default {
 }</string>
         </property>
         <property name="text">
-         <string>Rotation</string>
+         <string>Add Rotation</string>
+        </property>
+        <property name="default">
+         <bool>true</bool>
         </property>
         <property name="flat">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>
@@ -559,16 +566,16 @@ rot:default {
          <enum>Qt::StrongFocus</enum>
         </property>
         <property name="text">
-         <string>Translation</string>
+         <string>Add Translation</string>
         </property>
         <property name="autoDefault">
          <bool>false</bool>
         </property>
         <property name="default">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="flat">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
        </widget>
       </item>

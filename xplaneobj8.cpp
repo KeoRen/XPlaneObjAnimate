@@ -8,18 +8,30 @@ XPlaneObj8::XPlaneObj8()
 
 XPlaneObj8::XPlaneObj8(QList<QGeoCoordinate> animList, float speed)
 {
+    QVector2D startPos = QVector2D(0, 0);
+    startPos.setX(sin(animList[0].latitude() * M_PI / 180.0f) * RAYON_TERRE * 1000);
+    startPos.setY(sin(animList[0].longitude() * M_PI / 180.0f) * RAYON_TERRE * 1000);
+
     QVector2D lastPos = QVector2D(0, 0);
+    QVector2D pos = QVector2D(0, 0);
     float chrono = 0;
     float duree = 0;
 
+    speed = speed / 3.6f;
+
     for (int i = 0 ; i < animList.size() ; ++i)
     {
-        TranslationObj8* mvt = new TranslationObj8("none");
+        TranslationObj8* mvt = new TranslationObj8("LLFFS/AnimChrono");
         mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
-        lastPos = QVector2D(float(sin(animList[i].latitude()) * RAYON_TERRE), float(sin(animList[i].latitude()) * RAYON_TERRE));
-        duree = (sqrt(lastPos.x() * lastPos.x() + lastPos.y() * lastPos.y()) / (speed / 3.6) - chrono);
-        chrono += duree;
-        mvt->newKey(QVector4D(chrono, lastPos.x(), lastPos.y(), 0));
+        mvt->newKey(QVector4D(chrono + MIN_GAP, lastPos.x(), lastPos.y(), 0));
+        pos.setX(sin(animList[i].latitude() * M_PI / 180.0f) * RAYON_TERRE * 1000 - startPos.x());
+        pos.setY(sin(animList[i].longitude() * M_PI / 180.0f) * RAYON_TERRE * 1000 - startPos.y());
+        chrono += sqrt((((pos.x() - lastPos.x()) * (pos.x() - lastPos.x())) + ((pos.y() - lastPos.y()) * (pos.y() - lastPos.y())))) / speed;
+        if(isnan(chrono)) chrono = 0;
+        mvt->newKey(QVector4D(chrono - MIN_GAP, pos.x(), 0, pos.y()));
+        mvt->newKey(QVector4D(chrono, pos.x(), 0, pos.y()));
+        m_mvtList.append(mvt);
+        lastPos = pos;
     }
 }
 
@@ -73,12 +85,19 @@ QList<QVector4D> XPlaneObj8::animList()
             TranslationObj8* t = static_cast<TranslationObj8*>(m_mvtList.at(i));
             for (int k = 3 ; k < 4 /* t->keyCount() */ ; ++k)
             {
-                dist = sqrt(t->keyPoint(k).x() * t->keyPoint(k).x() + t->keyPoint(k).y() * t->keyPoint(k).y());
+                dist = sqrt((abs(t->keyPoint(k).x()) - abs(t->keyPoint(k - 2).x())) * (abs(t->keyPoint(k).x()) - abs(t->keyPoint(k - 2).x())) + (abs(t->keyPoint(k).z()) - abs(t->keyPoint(k - 2).z())) * (abs(t->keyPoint(k).z()) - abs(t->keyPoint(k - 2).z())));
+//                dist = sqrt(t->keyPoint(k).x() * t->keyPoint(k).x() + t->keyPoint(k).z() * t->keyPoint(k).z());
                 if (isnan(dist) || isinf(dist)) dist = 0;
                 speed = dist / (t->keyValue(k) - chrono) * 3.6f;
                 if (isnan(speed) || isinf(speed)) speed = 0;
-                angle = atan(abs(t->keyPoint(k).y()) / abs(t->keyPoint(k).x()));
+                angle = atan(abs(t->keyPoint(k).z()) / abs(t->keyPoint(k).x()));
                 if (isnan(angle) || isinf(angle)) angle = 0;
+                if (t->keyPoint(k).x() - t->keyPoint(k - 2).x() < 0)
+                {
+                    if (t->keyPoint(k).z() - t->keyPoint(k - 2).z() <= 0) angle += 180;
+                    else angle += 90;
+                }
+                else if (t->keyPoint(k).z() - t->keyPoint(k - 2).z() < 0) angle += 270;
                 chrono = t->keyValue(k);
                 animList << QVector4D(1, dist, speed, angle); //Type, distance, vitesse, angle
             }
@@ -89,7 +108,6 @@ QList<QVector4D> XPlaneObj8::animList()
             for (int k = 3 ; k < 4 /* r->keyCount() */ ; ++k)
             {
                 angle = r->keyAngle(k);
-                qDebug() << chrono;
                 speed = abs((angle - r->keyAngle(k - 1)) / (r->keyValue(k) - chrono));
                 if (isnan(speed)) speed = 0;
                 chrono = r->keyValue(k);
@@ -105,7 +123,7 @@ void XPlaneObj8::setupData(const QStringList &lines)
 {
     int number = 0; //numéro de ligne
 
-    qDebug() << lines.count() << "lignes reçues" ;
+    qDebug() << lines.count() << "lignes reçues";
 
     while (number < lines.count())
     {
