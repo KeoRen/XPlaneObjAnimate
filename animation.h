@@ -26,9 +26,9 @@ public:
 private:
      QString ecrit;
      void initTable();
-     QList<QRect> RectListe;
+     QList<QRect> RectList;
      int lastchoice;
-     QList<QVector4D> ActionListe;
+     QList<QVector4D> ActionList;
      float v_rotation;
 
 public slots:
@@ -45,12 +45,10 @@ public slots:
    void setDist(double value);
    void setAngle(double value);
    void setVit(double value);
-   /* void Animation();*/
-   /* void reset();*/
    void save();
    void getFile();
-   /* void openItem(int, int);*/
+
 
 };
 
-#endif // ANIMATION_H
+#endif

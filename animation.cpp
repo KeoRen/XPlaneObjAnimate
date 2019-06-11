@@ -13,7 +13,6 @@
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <QFrame>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QWidget>
@@ -73,25 +72,25 @@ this->setFixedSize(992,625);
 
 void animation::rotation()
 {
-    cout << "dist : " << ActionListe[lastchoice].y() << endl;
+    cout << "dist : " << ActionList[lastchoice].y() << endl;
     label->hide();
     dist->setValue(0);
     dist->hide();
     dist->blockSignals(true);
     label->setText("Distance (m) : ");
 
-    cout << "vit : " << ActionListe[lastchoice].z() << endl;
+    cout << "vit : " << ActionList[lastchoice].z() << endl;
 
     label_2->show();
-    vit->setValue( double(ActionListe[lastchoice].z()));
+    vit->setValue( double(ActionList[lastchoice].z()));
     vit->show();
     vit->blockSignals(false);
     label_2->setText("Vitesse (°/s) : ");
 
-    cout << "Angle : " << ActionListe[lastchoice].w() << endl;
+    cout << "Angle : " << ActionList[lastchoice].w() << endl;
 
     label_3->show();
-    angle->setValue( double(ActionListe[lastchoice].w()));
+    angle->setValue( double(ActionList[lastchoice].w()));
     angle->show();
     angle->blockSignals(false);
     label_3->setText("Angle (°) : ");
@@ -103,23 +102,23 @@ void animation::rotation()
 
 void animation::translation()
 {
-    cout << "dist : " << ActionListe[lastchoice].y() << endl;
+    cout << "dist : " << ActionList[lastchoice].y() << endl;
     label->show();
-    dist->setValue( double (ActionListe[lastchoice].y()));
+    dist->setValue( double (ActionList[lastchoice].y()));
     dist->show();
     dist->blockSignals(false);
     label->setText("Distance (m) : ");
 
-    cout << "vit : " << ActionListe[lastchoice].z() << endl;
+    cout << "vit : " << ActionList[lastchoice].z() << endl;
     label_2->show();
 
-    vit->setValue( double (ActionListe[lastchoice].z()));
+    vit->setValue( double (ActionList[lastchoice].z()));
     vit->show();
     vit->blockSignals(false);
     label_2->setText("Vitesse (km/h) : ");
 
     label_3->show();
-    angle->setValue( double (ActionListe[lastchoice].w()));
+    angle->setValue( double (ActionList[lastchoice].w()));
     angle->show();
     angle->blockSignals(false);
     label_3->setText("Angle (°) : ");
@@ -130,20 +129,20 @@ void animation::translation()
 
 void animation::setDist(double value)
 {
-    ActionListe[lastchoice].setY( float (value));
+    ActionList[lastchoice].setY( float (value));
 }
 
 void animation::setVit(double value)
 {
 
-    ActionListe[lastchoice].setZ(float (value));
+    ActionList[lastchoice].setZ(float (value));
 }
 
 
 void animation::setAngle(double value)
 {
 
-    ActionListe[lastchoice].setW(float (value));
+    ActionList[lastchoice].setW(float (value));
 }
 
 void animation::NewRotation()
@@ -159,16 +158,16 @@ void animation::NewTranslation()
 
 void animation::NewDraw(float type)
 {
-    RectListe.append(QRect(480, 100 + 100*RectListe.length(), 120,50));/*coordonné du rectangle*/
+    RectList.append(QRect(480, 100 + 100*RectList.length(), 120,50));/*coordonné du rectangle*/
     if(lastchoice > -1)
     {
-        ActionListe.append(ActionListe.last());
-        for (int i = ActionListe.length() - 1; i > lastchoice; i--) {
-            ActionListe[i] = ActionListe[i-1];
+        ActionList.append(ActionList.last());
+        for (int i = ActionList.length() - 1; i > lastchoice; i--) {
+            ActionList[i] = ActionList[i-1];
         }
-        ActionListe[lastchoice] = QVector4D(type,0,0,0);
+        ActionList[lastchoice] = QVector4D(type,0,0,0);
     }
-    else ActionListe.append(QVector4D(type,0,0,0));
+    else ActionList.append(QVector4D(type,0,0,0));
     lastchoice = -1;
     update();
 }
@@ -176,28 +175,28 @@ void animation::NewDraw(float type)
 void animation::draw(QPainter& paint)
 
 {
-    if(ActionListe.length() <= 4 )
+    if(ActionList.length() <= 4 )
     {
         rectScroll->hide();
 
-        for (int x = 0; x < RectListe.length(); x++) { /*boucle de la longueur du tableau qui à chaque boucle affiche le rectangle voulu*/
+        for (int x = 0; x < RectList.length(); x++) { /*boucle de la longueur du tableau qui à chaque boucle affiche le rectangle voulu*/
             paint.setPen(Qt::blue);
             if(x == lastchoice) paint.setPen(Qt::green);
 
-            paint.drawRect(RectListe[x]);
-            if( ActionListe[x].x() == 0.0f) paint.drawText(RectListe[x].x() + 10, RectListe[x].y() + 25, QString::number(x) + " : Rotation");
+            paint.drawRect(RectList[x]);
+            if( ActionList[x].x() == 0.0f) paint.drawText(RectList[x].x() + 10, RectList[x].y() + 25, QString::number(x) + " : Rotation");
 
-            else paint.drawText(RectListe[x].x() + 10, RectListe[x].y() + 25, QString::number(x) +  " : Translation");
+            else paint.drawText(RectList[x].x() + 10, RectList[x].y() + 25, QString::number(x) +  " : Translation");
          }
         paint.setPen(Qt::blue);
-        if( RectListe.length()>= 2)
+        if( RectList.length()>= 2)
         {
-            for (int x = 1;x<RectListe.length();x++) {
+            for (int x = 1;x<RectList.length();x++) {
                paint.drawLine( 540, 50+100*x,540, 100+100*x);
             }
         }
     }
-    if(ActionListe.length() > 4)
+    if(ActionList.length() > 4)
     {
         rectScroll->show();
         int limit = rectScroll->value();
@@ -206,12 +205,12 @@ void animation::draw(QPainter& paint)
             int y = limit + x;
             if(y == lastchoice) paint.setPen(Qt::green);
 
-            paint.drawRect(RectListe[x]);
-            if( ActionListe[y].x() == 0.0f) paint.drawText(RectListe[x].x() + 10, RectListe[x].y() + 25, QString::number(y) + " : Rotation");
+            paint.drawRect(RectList[x]);
+            if( ActionList[y].x() == 0.0f) paint.drawText(RectList[x].x() + 10, RectList[x].y() + 25, QString::number(y) + " : Rotation");
 
-            else paint.drawText(RectListe[x].x() + 10, RectListe[x].y() + 25, QString::number(y) +  " : Translation");
+            else paint.drawText(RectList[x].x() + 10, RectList[x].y() + 25, QString::number(y) +  " : Translation");
         }
-        if( RectListe.length()>= 2)
+        if( RectList.length()>= 2)
         {
             for (int x = 1;x<4;x++) {
                paint.drawLine( 540, 50+100*x,540, 100+100*x);
@@ -224,7 +223,7 @@ void animation::draw(QPainter& paint)
 
 void animation::paintEvent(QPaintEvent *)
 {
-    if(ActionListe.length() > 4) rectScroll->setMaximum(ActionListe.length()-4);
+    if(ActionList.length() > 4) rectScroll->setMaximum(ActionList.length()-4);
 
     QPainter paint(this);
 
@@ -236,8 +235,8 @@ void animation::supression()
 {
     if(lastchoice != -1 )
     {
-        ActionListe.removeAt(lastchoice);
-        RectListe.removeLast();
+        ActionList.removeAt(lastchoice);
+        RectList.removeLast();
         update();
         lastchoice = -1;
     }
@@ -250,17 +249,17 @@ void animation::mouseReleaseEvent(QMouseEvent *event)
     point.setX(event->x());
     point.setY(event->y());
 
-    for (int n=0;n<RectListe.length();n++) {
-        if(  point.x() >=  RectListe[n].x() && point.x() <= RectListe[n].topRight().x() && point.y() >= RectListe[n].y() &&  point.y() <= RectListe[n].bottomLeft().y() )
+    for (int n=0;n<RectList.length();n++) {
+        if(  point.x() >=  RectList[n].x() && point.x() <= RectList[n].topRight().x() && point.y() >= RectList[n].y() &&  point.y() <= RectList[n].bottomLeft().y() )
         {
-            if(ActionListe.length()>4) {
+            if(ActionList.length()>4) {
                 lastchoice = n + rectScroll->value();
             }
             else {
                 lastchoice = n;
             }
-            cout << "bloc n°" << lastchoice << " type : " << ActionListe[lastchoice].x() << endl;
-            if(ActionListe[lastchoice].x() == 1.0f) translation();
+            cout << "bloc n°" << lastchoice << " type : " << ActionList[lastchoice].x() << endl;
+            if(ActionList[lastchoice].x() == 1.0f) translation();
             else rotation();
             break;
         }
@@ -271,10 +270,10 @@ void animation::mouseReleaseEvent(QMouseEvent *event)
 
 void animation::save()
 {
-    for (int i = 0; i< ActionListe.length();i++) {
-        qDebug() << ActionListe[i];
+    for (int i = 0; i< ActionList.length();i++) {
+        qDebug() << ActionList[i];
     }
-    XPlaneObj8 animList(ActionListe);
+    XPlaneObj8 animList(ActionList);
 
 
     QUrl s = QFileDialog::getSaveFileName(
@@ -323,15 +322,15 @@ void animation::getFile()
         anim.setupData(lines);
 
 
-        ActionListe = anim.animList();
-        RectListe.clear();
-        for (int i = 0; i< ActionListe.length();i++) {
-            RectListe.append(QRect(480, 100 + 100*RectListe.length(), 120,50));
+        ActionList = anim.animList();
+        RectList.clear();
+        for (int i = 0; i< ActionList.length();i++) {
+            RectList.append(QRect(480, 100 + 100*RectList.length(), 120,50));
         }
 
         update();
-        for (int i = 0; i< ActionListe.length();i++) {
-            qDebug() << ActionListe[i];
+        for (int i = 0; i< ActionList.length();i++) {
+            qDebug() << ActionList[i];
         }
     if(!s.toString().isNull()) edtFile->setText(s.toString());
 }

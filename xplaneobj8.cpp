@@ -15,7 +15,6 @@ XPlaneObj8::XPlaneObj8(QList<QGeoCoordinate> animList, float speed)
     QVector2D lastPos = QVector2D(0, 0);
     QVector2D pos = QVector2D(0, 0);
     float chrono = 0;
-    float duree = 0;
 
     speed = speed / 3.6f;
 
@@ -41,10 +40,11 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
     QVector2D lastPos = QVector2D(0, 0);
     float lastAngle = 0;
     int angleType = 0;
+    QVector2D pos = QVector2D(0, 0);
+
 
     for (int i = 0 ; i < animList.size() ; ++i)
     {
-
         if (int(animList[i].x()) == 1)
         {
             TranslationObj8* mvt = new TranslationObj8("LLFFS/AnimChrono");
@@ -52,18 +52,18 @@ XPlaneObj8::XPlaneObj8(QList<QVector4D> animList)
             mvt->newKey(QVector4D(chrono + MIN_GAP, lastPos.x(), lastPos.y(), 0));
             chrono += (animList[i].y() / float(animList[i].z() / 3.6f));
             angleType = animList[i].w() / 90;
-            qDebug() << "Résultat de la division entière : " << angleType;
             animList[i].setW(animList[i].w() - angleType * 90);
-            lastPos = QVector2D(cos(animList[i].w() * M_PI / 180.0f) * animList[i].y(), sin(animList[i].w() * M_PI / 180.0f) * animList[i].y());
-            if (angleType == 1) lastPos.setX(-lastPos.x());
+            pos = QVector2D(cos(animList[i].w() * M_PI / 180.0f) * animList[i].y(), sin(animList[i].w() * M_PI / 180.0f) * animList[i].y());
+            if (angleType == 1) pos.setY(-pos.y());
             if (angleType == 2)
             {
-                lastPos.setX(-lastPos.x());
-                lastPos.setY(-lastPos.y());
+                pos.setX(-pos.x());
+                pos.setY(-pos.y());
             }
-            if (angleType == 3) lastPos.setY(-lastPos.y());
-            mvt->newKey(QVector4D(chrono - MIN_GAP, lastPos.x(), 0, lastPos.y()));
-            mvt->newKey(QVector4D(chrono, lastPos.x(), 0, lastPos.y()));
+            if (angleType == 3) pos.setX(-pos.x());
+            mvt->newKey(QVector4D(chrono - MIN_GAP, lastPos.x() + pos.x(), 0, lastPos.y() + pos.y()));
+            mvt->newKey(QVector4D(chrono, lastPos.x() + pos.x(), 0, lastPos.y() + pos.y()));
+            lastPos = pos;
             m_mvtList.append(mvt);
         }
         else
@@ -87,6 +87,7 @@ QList<QVector4D> XPlaneObj8::animList()
     float speed;
     float angle;
     float chrono = 0;
+    int inv = 2;
 
     for (int i = 0 ; i < m_mvtList.size() ; ++i)
     {
@@ -97,21 +98,17 @@ QList<QVector4D> XPlaneObj8::animList()
             for (int k = 3 ; k < 4 /* t->keyCount() */ ; ++k)
             {
                 dist = sqrt((abs(t->keyPoint(k).x()) - abs(t->keyPoint(k - 2).x())) * (abs(t->keyPoint(k).x()) - abs(t->keyPoint(k - 2).x())) + (abs(t->keyPoint(k).z()) - abs(t->keyPoint(k - 2).z())) * (abs(t->keyPoint(k).z()) - abs(t->keyPoint(k - 2).z())));
-                qDebug() << "La distance de la translation n°" << i + 1 << " est " << dist;
                 if (isnan(dist) || isinf(dist)) dist = 0;
                 speed = dist / (t->keyValue(k) - chrono) * 3.6f;
-                qDebug() << "La vitesse de la translation n°" << i + 1 << " est " << speed;
                 if (isnan(speed) || isinf(speed)) speed = 0;
-                angle = atan(abs(t->keyPoint(k).z()) / abs(t->keyPoint(k).x()));
-                qDebug() << "L'angle 1 de la translation n°" << i + 1 << " est " << speed;
+                angle = atan(abs(abs(t->keyPoint(k).z()) - abs(t->keyPoint(k - 2).z())) / abs(abs(t->keyPoint(k).x()) - abs(t->keyPoint(k - 2).x()))) * 180.0f / M_PI;
                 if (isnan(angle) || isinf(angle)) angle = 0;
-                if (t->keyPoint(k).x() - t->keyPoint(k - 2).x() < 0)
+                if (t->keyPoint(k).x() < t->keyPoint(k - 2).x() && inv % 2 == 0)
                 {
-                    if (t->keyPoint(k).z() - t->keyPoint(k - 2).z() <= 0) angle += 180;
-                    else angle += 90;
+                    if (t->keyPoint(k).z() < t->keyPoint(k - 2).z()) angle += 180;
+                    else angle += 270;
                 }
-                else if (t->keyPoint(k).z() - t->keyPoint(k - 2).z() < 0) angle += 270;
-                qDebug() << "L'angle 2 de la translation n°" << i + 1 << " est " << speed;
+                else if (t->keyPoint(k).z() < t->keyPoint(k - 2).z()) angle += 90;
                 chrono = t->keyValue(k);
                 animList << QVector4D(1, dist, speed, angle); //Type, distance, vitesse, angle
             }
@@ -121,6 +118,7 @@ QList<QVector4D> XPlaneObj8::animList()
             RotationObj8* r = static_cast<RotationObj8*>(m_mvtList.at(i));
             for (int k = 3 ; k < 4 /* r->keyCount() */ ; ++k)
             {
+                ++inv;
                 angle = r->keyAngle(k);
                 speed = abs((angle - r->keyAngle(k - 1)) / (r->keyValue(k) - chrono));
                 if (isnan(speed)) speed = 0;
@@ -325,7 +323,7 @@ void XPlaneObj8::writeData(const QString objPath)
                 if (p.x() < 0.001) p.setX(0);
                 if (p.y() < 0.001) p.setY(0);
                 if (p.z() < 0.001) p.setZ(0);
-                if (i > 2 && inch) mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(-p.x()).arg(p.y()).arg(-p.z());
+                if (i > 2 && inch) mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(-p.x()).arg(p.y()).arg(p.z());
                 else mvt += QString(" %1 %2 %3 %4").arg(t->keyValue(i)).arg(p.x()).arg(p.y()).arg(p.z());
                 list << mvt;
                 lastResort = t->keyPoint(i);
